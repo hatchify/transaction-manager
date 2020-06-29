@@ -8,14 +8,17 @@ import (
 )
 
 // New will implement a new instance of transactions Manager
-func New() *Manager {
+func New(fns ...TxnFn) *Manager {
 	var m Manager
+	m.fns = fns
 	return &m
 }
 
 // Manager manages multiple trasnactions
 type Manager struct {
 	mux sync.Mutex
+
+	fns []TxnFn
 
 	q *queue.Queue
 
@@ -24,7 +27,7 @@ type Manager struct {
 }
 
 // Run will call the provided run func from within the collection of transactions
-func (m *Manager) Run(run func() error, fns ...TxnFn) (err error) {
+func (m *Manager) Run(run func() error) (err error) {
 	// Acquire mutex lock
 	m.mux.Lock()
 	// Defer the release of mutex lock
@@ -32,18 +35,11 @@ func (m *Manager) Run(run func() error, fns ...TxnFn) (err error) {
 	// Defer teardown of manager
 	defer m.teardown()
 
-	// Set queue
-	m.q = queue.New(len(fns), 0)
-	// Initialize out channel
-	m.out = make(chan error, len(fns))
-	// Initialize inbound channel slice
-	m.ins = make([]chan error, 0, len(fns))
+	// Initialize items needed for run
+	m.initRun()
 
 	// Open provided transaction functions
-	start, end := m.openTxns(fns)
-
-	// Wait for all transactions to start
-	start.Wait()
+	done := m.openTxns()
 
 	// Now that transactions have been initialized, call target function
 	err = run()
@@ -52,7 +48,7 @@ func (m *Manager) Run(run func() error, fns ...TxnFn) (err error) {
 	m.pushErrorToInbounds(err)
 
 	// Wait for all transactions to finish
-	end.Wait()
+	done.Wait()
 
 	// Get errors outbound out channel
 	errs := m.newErrorsFromOutbound()
@@ -65,6 +61,15 @@ func (m *Manager) Run(run func() error, fns ...TxnFn) (err error) {
 
 	// Collect and combine any errors we encountered during the transaction close
 	return errs.Err()
+}
+
+func (m *Manager) initRun() {
+	// Set queue
+	m.q = queue.New(len(m.fns), 0)
+	// Initialize out channel
+	m.out = make(chan error, len(m.fns))
+	// Initialize inbound channel slice
+	m.ins = make([]chan error, 0, len(m.fns))
 }
 
 func (m *Manager) pushErrorToInbounds(err error) {
@@ -87,18 +92,22 @@ func (m *Manager) newErrorsFromOutbound() (errs errors.ErrorList) {
 	return
 }
 
-func (m *Manager) openTxns(fns []TxnFn) (start, end sync.WaitGroup) {
+func (m *Manager) openTxns() (end sync.WaitGroup) {
+	var start sync.WaitGroup
 	// Set waitgroups
-	start.Add(len(fns))
-	end.Add(len(fns))
+	start.Add(len(m.fns))
+	end.Add(len(m.fns))
 
 	// Iterate through transaction functions
-	for _, fn := range fns {
+	for _, fn := range m.fns {
 		// Create inbound channel by opening transaction
 		inCh := m.openTxn(fn, m.out, &start, &end)
 		// Append inbound channel to inbound transactions slice
 		m.ins = append(m.ins, inCh)
 	}
+
+	// Wait for all transactions to start
+	start.Wait()
 
 	return
 }
