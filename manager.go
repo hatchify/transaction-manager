@@ -32,6 +32,20 @@ func (m *Manager) Run(run func() error) (err error) {
 	m.mux.Lock()
 	// Defer the release of mutex lock
 	defer m.mux.Unlock()
+	// Call internal run func
+	return m.run(run)
+}
+
+func (m *Manager) initRun() {
+	// Set queue
+	m.q = queue.New(len(m.fns), 0)
+	// Initialize out channel
+	m.out = make(chan error, len(m.fns))
+	// Initialize inbound channel slice
+	m.ins = make([]chan error, 0, len(m.fns))
+}
+
+func (m *Manager) run(run func() error) (err error) {
 	// Defer teardown of manager
 	defer m.teardown()
 
@@ -50,6 +64,9 @@ func (m *Manager) Run(run func() error) (err error) {
 	// Wait for all transactions to finish
 	done.Wait()
 
+	// Since all transactions have ended, we can safely close outbound channel
+	close(m.out)
+
 	// Get errors outbound out channel
 	errs := m.newErrorsFromOutbound()
 
@@ -61,15 +78,6 @@ func (m *Manager) Run(run func() error) (err error) {
 
 	// Collect and combine any errors we encountered during the transaction close
 	return errs.Err()
-}
-
-func (m *Manager) initRun() {
-	// Set queue
-	m.q = queue.New(len(m.fns), 0)
-	// Initialize out channel
-	m.out = make(chan error, len(m.fns))
-	// Initialize inbound channel slice
-	m.ins = make([]chan error, 0, len(m.fns))
 }
 
 func (m *Manager) pushErrorToInbounds(err error) {
@@ -92,8 +100,8 @@ func (m *Manager) newErrorsFromOutbound() (errs errors.ErrorList) {
 	return
 }
 
-func (m *Manager) openTxns() (end sync.WaitGroup) {
-	var start sync.WaitGroup
+func (m *Manager) openTxns() (done *sync.WaitGroup) {
+	var start, end sync.WaitGroup
 	// Set waitgroups
 	start.Add(len(m.fns))
 	end.Add(len(m.fns))
@@ -109,6 +117,8 @@ func (m *Manager) openTxns() (end sync.WaitGroup) {
 	// Wait for all transactions to start
 	start.Wait()
 
+	// Assign reference to done
+	done = &end
 	return
 }
 
@@ -125,8 +135,9 @@ func (m *Manager) openTxn(fn TxnFn, out chan error, start, end *sync.WaitGroup) 
 func (m *Manager) teardown() {
 	// Close queue
 	m.q.Close()
-	// Set queue reference to nil
+
+	// Set references to nil
 	m.q = nil
-	// Close outbound channel
-	close(m.out)
+	m.ins = nil
+	m.out = nil
 }

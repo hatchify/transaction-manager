@@ -1,0 +1,6 @@
+github.com/Hatch1fy/errors v0.4.77 h1:0Z2S/nbd+hga+CydwpX5BonUVa338+XPkTSMeZSxhnU=
+github.com/Hatch1fy/errors v0.4.77/go.mod h1:LPnug0nWT7I99nYl62NfYjxNMCCEx3lBV5YWIco+H0w=
+github.com/hatchify/atoms v0.4.77 h1:JGBaNULC3Kx8LiKvxkgcNxafM5P063soeoiKvTs+m/o=
+github.com/hatchify/atoms v0.4.77/go.mod h1:6H72BaBb4o7EHfkGXb3AriWU0S5CSrW1kDDHdjdeNB8=
+github.com/hatchify/queue v0.4.77 h1:M+Ph2bAtL1iYPN8CWZXd+YP92bBqXnSgDxVQK2br5og=
+github.com/hatchify/queue v0.4.77/go.mod h1:GCpUbFRlSiheEnRN6lQi4KOUtfyXpPKp9IHu2x3Jjcg=
