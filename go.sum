@@ -1,4 +1,4 @@
 github.com/Hatch1fy/errors v0.4.80 h1:LBr5Elytx6npBlF/36KTamC6I7h6VqkOVkRkbIdj3xY=
 github.com/Hatch1fy/errors v0.4.80/go.mod h1:SJFCeScmERvwtYMG7EU24Fe0KfXmiIs7tNlcIl0STKk=
-github.com/hatchify/queue v0.4.78 h1:clbQwUlx4t3macNPDO55Xeji0PmRie/OSa8DoNH2nXI=
-github.com/hatchify/queue v0.4.78/go.mod h1:b976dT/lR/zCD+aXGI4a9t1LJZlW8ukI6BPxxih0ehY=
+github.com/hatchify/queue v0.4.79 h1:lQUznTai79WmoB5t/EGn5u3RtTinNPUHnfkY2CV0VUE=
+github.com/hatchify/queue v0.4.79/go.mod h1:b976dT/lR/zCD+aXGI4a9t1LJZlW8ukI6BPxxih0ehY=
