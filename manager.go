@@ -3,7 +3,7 @@ package manager
 import (
 	"sync"
 
-	"github.com/Hatch1fy/errors"
+	"github.com/hatchify/errors"
 	"github.com/hatchify/queue"
 )
 
