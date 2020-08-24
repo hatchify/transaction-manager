@@ -1,6 +1,9 @@
 package manager
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 // TxnFn is called by the transaction Manager
-type TxnFn func(started *sync.WaitGroup, inboundC <-chan error, outboundC chan<- error)
+type TxnFn func(ctx context.Context, started *sync.WaitGroup, inboundC <-chan error, outboundC chan<- error)
