@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hatchify/errors"
@@ -27,13 +28,13 @@ type Manager struct {
 }
 
 // Run will call the provided run func from within the collection of transactions
-func (m *Manager) Run(run func() error) (err error) {
+func (m *Manager) Run(ctx context.Context, run func() error) (err error) {
 	// Acquire mutex lock
 	m.mux.Lock()
 	// Defer the release of mutex lock
 	defer m.mux.Unlock()
 	// Call internal run func
-	return m.run(run)
+	return m.run(ctx, run)
 }
 
 func (m *Manager) initRun() {
@@ -45,7 +46,7 @@ func (m *Manager) initRun() {
 	m.ins = make([]chan error, 0, len(m.fns))
 }
 
-func (m *Manager) run(run func() error) (err error) {
+func (m *Manager) run(ctx context.Context, run func() error) (err error) {
 	// Defer teardown of manager
 	defer m.teardown()
 
@@ -53,7 +54,7 @@ func (m *Manager) run(run func() error) (err error) {
 	m.initRun()
 
 	// Open provided transaction functions
-	done := m.openTxns()
+	done := m.openTxns(ctx)
 
 	// Now that transactions have been initialized, call target function
 	err = run()
@@ -100,7 +101,7 @@ func (m *Manager) newErrorsFromOutbound() (errs errors.ErrorList) {
 	return
 }
 
-func (m *Manager) openTxns() (done *sync.WaitGroup) {
+func (m *Manager) openTxns(ctx context.Context) (done *sync.WaitGroup) {
 	var start, end sync.WaitGroup
 	// Set waitgroups
 	start.Add(len(m.fns))
@@ -109,7 +110,7 @@ func (m *Manager) openTxns() (done *sync.WaitGroup) {
 	// Iterate through transaction functions
 	for _, fn := range m.fns {
 		// Create inbound channel by opening transaction
-		inCh := m.openTxn(fn, m.out, &start, &end)
+		inCh := m.openTxn(ctx, fn, m.out, &start, &end)
 		// Append inbound channel to inbound transactions slice
 		m.ins = append(m.ins, inCh)
 	}
@@ -122,10 +123,10 @@ func (m *Manager) openTxns() (done *sync.WaitGroup) {
 	return
 }
 
-func (m *Manager) openTxn(fn TxnFn, out chan error, start, end *sync.WaitGroup) (in chan error) {
+func (m *Manager) openTxn(ctx context.Context, fn TxnFn, out chan error, start, end *sync.WaitGroup) (in chan error) {
 	in = make(chan error, 1)
 	m.q.New(func() {
-		fn(start, in, out)
+		fn(ctx, start, in, out)
 		end.Done()
 	})
 
